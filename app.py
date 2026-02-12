@@ -12,7 +12,7 @@ app = FastAPI(title="Sanction Impact Analyzer API")
 # --------------------------------------------------
 # 2️⃣ Load trained model
 # --------------------------------------------------
-model = SanctionImpactGNN(in_dim=17)  # adjust if your feature dim is different
+model = SanctionImpactGNN(in_dim=8)  # adjust if your feature dim is different
 model.load_state_dict(torch.load("saved_model.pt", map_location="cpu"))
 model.eval()
 
