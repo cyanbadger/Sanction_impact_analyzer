@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import torch
 from torch_geometric.data import Data
 from model import SanctionImpactGNN
+from utils import load_trade_graph
 
 # --------------------------------------------------
 # 1️⃣ Create FastAPI app
@@ -35,18 +36,6 @@ class PolicyInput(BaseModel):
 @app.post("/predict")
 def predict(policy: PolicyInput):
 
-    # ----- Example Graph (Replace with real data later) -----
-    num_nodes = 5
-    feature_dim = 17
-
-    x = torch.rand(num_nodes, feature_dim)
-
-    edge_index = torch.tensor([
-        [0, 1, 2, 3],
-        [1, 2, 3, 4]
-    ], dtype=torch.long)
-
-    # ----- Build Policy Vector -----
     policy_vector = torch.tensor([
         policy.severity,
         policy.financial,
@@ -57,11 +46,7 @@ def predict(policy: PolicyInput):
         policy.binding
     ], dtype=torch.float32)
 
-    # Inject policy signal into India node (index 0)
-    x[0, -7:] = policy_vector
-
-    data = Data(x=x, edge_index=edge_index)
-
+    data = load_trade_graph(policy_vector, feature_dim=8)
     # Model expects list of yearly graphs
     preds = model([data])
 
