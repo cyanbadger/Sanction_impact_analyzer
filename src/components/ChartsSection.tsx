@@ -1,0 +1,84 @@
+import {
+  LineChart, Line, BarChart, Bar, AreaChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+} from "recharts";
+import { getGdpData, getTradeData, getFdiData, type SanctionType } from "@/lib/sanctionData";
+
+const chartColors = {
+  gold: "hsl(43, 96%, 56%)",
+  saffron: "hsl(33, 100%, 50%)",
+  dim: "hsl(33, 60%, 30%)",
+  teal: "hsl(170, 60%, 50%)",
+};
+
+const tooltipStyle = {
+  backgroundColor: "hsl(0, 0%, 8%)",
+  border: "1px solid hsl(33, 30%, 16%)",
+  borderRadius: 8,
+  color: "#fff",
+};
+
+const gridStroke = "hsl(33, 10%, 15%)";
+const axisStroke = "hsl(0, 0%, 40%)";
+
+const ChartsSection = ({ sanctionType }: { sanctionType: SanctionType }) => {
+  const gdp = getGdpData(sanctionType);
+  const trade = getTradeData(sanctionType);
+  const fdi = getFdiData(sanctionType);
+
+  return (
+    <div className="grid gap-8 lg:grid-cols-2">
+      {/* GDP Line Chart */}
+      <div className="rounded-xl border border-border bg-card p-6 lg:col-span-2">
+        <h3 className="font-display text-lg font-semibold text-foreground mb-4">
+          GDP Growth (%) — {sanctionType}
+        </h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={gdp}>
+            <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+            <XAxis dataKey="year" stroke={axisStroke} fontSize={12} />
+            <YAxis stroke={axisStroke} fontSize={12} />
+            <Tooltip contentStyle={tooltipStyle} />
+            <Line type="monotone" dataKey="value" stroke={chartColors.gold} strokeWidth={3} dot={{ r: 4, fill: chartColors.gold }} name="GDP %" />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Trade Bar Chart */}
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h3 className="font-display text-lg font-semibold text-foreground mb-4">
+          Trade Volume (B USD) — Before vs After
+        </h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={trade}>
+            <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+            <XAxis dataKey="year" stroke={axisStroke} fontSize={12} />
+            <YAxis stroke={axisStroke} fontSize={12} />
+            <Tooltip contentStyle={tooltipStyle} />
+            <Legend />
+            <Bar dataKey="before" fill={chartColors.dim} name="Before Sanctions" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="after" fill={chartColors.saffron} name="After Sanctions" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* FDI Area Chart */}
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h3 className="font-display text-lg font-semibold text-foreground mb-4">
+          FDI Inflow Trend (B USD)
+        </h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <AreaChart data={fdi}>
+            <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+            <XAxis dataKey="year" stroke={axisStroke} fontSize={12} />
+            <YAxis stroke={axisStroke} fontSize={12} />
+            <Tooltip contentStyle={tooltipStyle} />
+            <Area type="monotone" dataKey="value" stroke={chartColors.gold} fill={chartColors.gold} fillOpacity={0.15} strokeWidth={2} name="FDI (B USD)" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+};
+
+export default ChartsSection;

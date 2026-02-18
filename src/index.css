@@ -1,0 +1,124 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 4%;
+    --foreground: 45 10% 92%;
+
+    --card: 0 0% 8%;
+    --card-foreground: 45 10% 92%;
+
+    --popover: 0 0% 8%;
+    --popover-foreground: 45 10% 92%;
+
+    --primary: 33 100% 50%;
+    --primary-foreground: 0 0% 4%;
+
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 45 10% 85%;
+
+    --muted: 0 0% 14%;
+    --muted-foreground: 45 5% 50%;
+
+    --accent: 33 100% 50%;
+    --accent-foreground: 0 0% 4%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 33 30% 16%;
+    --input: 0 0% 14%;
+    --ring: 33 100% 50%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 6%;
+    --sidebar-foreground: 45 10% 85%;
+    --sidebar-primary: 33 100% 50%;
+    --sidebar-primary-foreground: 0 0% 4%;
+    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent-foreground: 45 10% 85%;
+    --sidebar-border: 33 30% 16%;
+    --sidebar-ring: 33 100% 50%;
+
+    --gold: 43 96% 56%;
+    --gold-dim: 33 60% 30%;
+    --success: 142 70% 45%;
+    --warning: 38 92% 50%;
+    --danger: 0 72% 51%;
+  }
+
+  .light {
+    --background: 40 20% 97%;
+    --foreground: 0 0% 8%;
+
+    --card: 40 15% 93%;
+    --card-foreground: 0 0% 8%;
+
+    --popover: 40 20% 97%;
+    --popover-foreground: 0 0% 8%;
+
+    --primary: 33 100% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 40 10% 88%;
+    --secondary-foreground: 0 0% 15%;
+
+    --muted: 40 10% 91%;
+    --muted-foreground: 0 0% 40%;
+
+    --accent: 33 100% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 40 15% 82%;
+    --input: 40 15% 82%;
+    --ring: 33 100% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@layer utilities {
+  .text-gradient-saffron {
+    background: linear-gradient(135deg, hsl(43 96% 56%), hsl(33 100% 50%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .text-gradient-gold {
+    background: linear-gradient(135deg, hsl(43 96% 56%), hsl(33 100% 45%), hsl(25 90% 40%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .glow-saffron {
+    box-shadow: 0 0 30px hsl(33 100% 50% / 0.25), 0 0 60px hsl(33 100% 50% / 0.1);
+  }
+  .glow-gold {
+    box-shadow: 0 0 20px hsl(43 96% 56% / 0.3), 0 0 40px hsl(43 96% 56% / 0.1);
+  }
+  .border-glow {
+    border-color: hsl(33 100% 50% / 0.5);
+  }
+  .gold-line {
+    background: linear-gradient(90deg, transparent, hsl(43 96% 56% / 0.6), transparent);
+    height: 1px;
+  }
+}
