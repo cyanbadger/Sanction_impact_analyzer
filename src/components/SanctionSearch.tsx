@@ -6,6 +6,7 @@ import {
   LineChart, Line, BarChart, Bar, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
+import { analyzeSanction } from "../api";
 
 const typeIcons: Record<SanctionEntity["type"], typeof Building2> = {
   Organisation: Building2,
@@ -18,6 +19,8 @@ const SanctionSearch = () => {
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("All");
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
   const filtered = sanctionEntities.filter((e) => {
     const matchesQuery = !query || e.name.toLowerCase().includes(query.toLowerCase()) || e.country.toLowerCase().includes(query.toLowerCase());
@@ -97,7 +100,23 @@ const SanctionSearch = () => {
                   <div className="flex items-center gap-3">
                     <span className="text-xs text-muted-foreground whitespace-nowrap">Added: {e.addedDate}</span>
                     <button
-                      onClick={() => setExpandedIndex(isExpanded ? null : i)}
+                      onClick={async () => {
+                        if (!isExpanded) {
+                          setLoading(true);
+                          try {
+                            const result = await analyzeSanction(e.name, e.type);
+                            setAnalysisResult(result);
+                          } catch (err) {
+                            console.error(err);
+                          }
+                      
+                          setLoading(false);
+                          setExpandedIndex(i);
+                        } else {
+                          setExpandedIndex(null);
+                        }
+                      }}
+
                       className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors whitespace-nowrap"
                     >
                       {isExpanded ? "Close" : "Learn More"}
@@ -114,6 +133,14 @@ const SanctionSearch = () => {
                     <h4 className="font-display font-semibold text-foreground mb-2 flex items-center gap-2">
                       <TrendingDown className="h-4 w-4 text-primary" />
                       Sanction Impact Analysis — {e.name}
+                      {loading && <p className="text-xs text-muted-foreground">Analyzing...</p>}
+
+                      {analysisResult && (
+                        <p className="text-sm text-primary mt-2">
+                          Impact Score: {analysisResult.impact_score}
+                        </p>
+                      )}
+
                     </h4>
                     <p className="text-sm text-muted-foreground leading-relaxed">{e.detailSummary}</p>
                   </div>
