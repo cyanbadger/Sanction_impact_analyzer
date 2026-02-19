@@ -31,6 +31,18 @@ const SanctionSearch = () => {
   const goldColor = "hsl(36, 100%, 60%)";
   const saffronColor = "hsl(30, 100%, 50%)";
   const mutedGold = "hsl(36, 80%, 40%)";
+  function mapEntityToPolicy(entity: SanctionEntity) {
+    return {
+      severity: entity.status === "Active" ? 0.9 : 0.3,
+      financial: entity.type === "Bank" ? 1 : 0,
+      trade: entity.type === "Organisation" ? 1 : 0,
+      technology: entity.reason.toLowerCase().includes("technology") ? 1 : 0,
+      energy: entity.reason.toLowerCase().includes("oil") ? 1 : 0,
+      issuer_strength: 0.7,
+      binding: 1,
+    };
+  }
+
 
   return (
     <div className="mt-14 animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
@@ -104,7 +116,9 @@ const SanctionSearch = () => {
                         if (!isExpanded) {
                           setLoading(true);
                           try {
-                            const result = await analyzeSanction(e.name, e.type);
+                            const policy = mapEntityToPolicy(e);
+                            const result = await analyzeSanction(policy);
+
                             setAnalysisResult(result);
                           } catch (err) {
                             console.error(err);
