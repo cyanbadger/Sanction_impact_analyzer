@@ -1,25 +1,16 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import torch
-from torch_geometric.data import Data
 from model import SanctionImpactGNN
 from utils import load_trade_graph
 
-# --------------------------------------------------
-# 1️⃣ Create FastAPI app
-# --------------------------------------------------
 app = FastAPI(title="Sanction Impact Analyzer API")
 
-# --------------------------------------------------
-# 2️⃣ Load trained model
-# --------------------------------------------------
-model = SanctionImpactGNN(in_dim=8)  # adjust if your feature dim is different
+# 8 economic + 7 sanction = 15
+model = SanctionImpactGNN(in_dim=15)
 model.load_state_dict(torch.load("saved_model.pt", map_location="cpu"))
 model.eval()
 
-# --------------------------------------------------
-# 3️⃣ Define Input Schema (what API expects)
-# --------------------------------------------------
 class PolicyInput(BaseModel):
     severity: float
     financial: int
@@ -30,9 +21,6 @@ class PolicyInput(BaseModel):
     binding: int
 
 
-# --------------------------------------------------
-# 4️⃣ Prediction Endpoint
-# --------------------------------------------------
 @app.post("/predict")
 def predict(policy: PolicyInput):
 
@@ -46,8 +34,14 @@ def predict(policy: PolicyInput):
         policy.binding
     ], dtype=torch.float32)
 
-    data = load_trade_graph(policy_vector, feature_dim=8)
-    # Model expects list of yearly graphs
-    preds = model([data])
+    # build temporal graph sequence
+    graphs = []
+    for _ in range(5):  # last 5 years
+        graphs.append(load_trade_graph(policy_vector))
 
-    return preds
+    with torch.no_grad():
+        preds = model(graphs)
+
+    # convert tensors to numbers
+    output = {k: float(v.item()) for k, v in preds.items()}
+    return output
