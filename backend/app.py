@@ -4,13 +4,20 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import torch
 from model import SanctionImpactGNN
 from utils import load_trade_graph
+from fastapi.middleware.cors import CORSMiddleware
 
 # Hugging Face
 from transformers import pipeline
 
 # ---------------- Initialize API ----------------
 app = FastAPI(title="Sanction Impact Analyzer API")
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # dev only
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 print("Loading GNN model...")
 
 # ---------------- Load GNN ----------------
