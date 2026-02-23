@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Shield, Moon, Sun, ArrowLeft } from "lucide-react";
+import { Globe, Moon, Sun, ArrowLeft } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 
 const Navbar = () => {
@@ -23,7 +23,7 @@ const Navbar = () => {
             </button>
           )}
           <Link to="/" className="flex items-center gap-2">
-            <Shield className="h-6 w-6 text-primary" />
+            <Globe className="h-6 w-6 text-primary" />
             <span className="font-display text-lg font-bold tracking-tight text-foreground">
               Sanction Impact <span className="text-gradient-gold">Analyser</span>
             </span>
