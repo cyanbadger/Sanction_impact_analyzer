@@ -91,15 +91,16 @@ export default function SanctionSearch() {
         {filtered.map((e, i) => {
           const TypeIcon = typeIcons[e.type];
           const isExpanded = expandedIndex === i;
-
           const chartData = analysisResult
-            ? analysisResult.gdp.map((val: number, idx: number) => ({
-                year: `T${idx}`,
-                gdp: val,
-                trade: analysisResult.trade[idx],
-                fdi: analysisResult.fdi[idx],
-              }))
-            : [];
+                  ? [
+                      {
+                        year: "Now",
+                        gdp: analysisResult.gdp,
+                        trade: analysisResult.trade,
+                        fdi: analysisResult.fdi,
+                      },
+                    ]
+                  : [];
 
           return (
             <div key={i} className="border rounded p-4">
@@ -139,52 +140,35 @@ export default function SanctionSearch() {
               </div>
 
               {isExpanded && (
-                <div className="mt-4 space-y-4">
-                  {loading && <p>Running model…</p>}
+                  <div className="mt-4 space-y-4">
+                    {loading && <p>Running model…</p>}
+                
+                    {analysisResult && (
+                      <>
+                        <div className="text-lg font-semibold">
+                          Impact Score: {analysisResult.score?.toFixed(2)}
+                        </div>
 
-                  {analysisResult && (
-                    <>
-                      <div className="text-lg font-semibold">
-                        Impact Score:{" "}
-                        {analysisResult.score?.[0]?.toFixed(2)}
-                      </div>
-
-                      <ResponsiveContainer width="100%" height={200}>
-                        <LineChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="year" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Line dataKey="gdp" />
-                        </LineChart>
-                      </ResponsiveContainer>
-
-                      <ResponsiveContainer width="100%" height={200}>
-                        <BarChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="year" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Bar dataKey="trade" />
-                        </BarChart>
-                      </ResponsiveContainer>
-
-                      <ResponsiveContainer width="100%" height={200}>
-                        <AreaChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="year" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Area dataKey="fdi" />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </>
-                  )}
-                </div>
-              )}
+                        {analysisResult.explanation && (
+                          <div className="text-sm text-gray-600 mt-2">
+                            {analysisResult.explanation}
+                          </div>
+                        )}
+                                        
+                        <ResponsiveContainer width="100%" height={200}>
+                          <LineChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="year" />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Line dataKey="gdp" />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </>
+                    )}
+                  </div>
+                )}
             </div>
           );
         })}
