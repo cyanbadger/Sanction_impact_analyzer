@@ -3,7 +3,8 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import { getGdpData, getTradeData, getFdiData, type SanctionType } from "@/lib/sanctionData";
-
+import { useState } from "react";
+import { explainMetric } from "../api";
 const chartColors = {
   gold: "hsl(43, 96%, 56%)",
   saffron: "hsl(33, 100%, 50%)",
@@ -22,6 +23,8 @@ const gridStroke = "hsl(33, 10%, 15%)";
 const axisStroke = "hsl(0, 0%, 40%)";
 
 const ChartsSection = ({ sanctionType }: { sanctionType: SanctionType }) => {
+  const [explanation, setExplanation] = useState("");
+  const [explainLoading, setExplainLoading] = useState(false);
   const gdp = getGdpData(sanctionType);
   const trade = getTradeData(sanctionType);
   const fdi = getFdiData(sanctionType);
@@ -34,7 +37,36 @@ const ChartsSection = ({ sanctionType }: { sanctionType: SanctionType }) => {
           GDP Growth (%) — {sanctionType}
         </h3>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={gdp}>
+          <LineChart
+            data={gdp}
+            onClick={async (state: any) => {
+              if (!state?.activePayload) return;
+          
+              const value = state.activePayload[0].value;
+          
+              setExplainLoading(true);
+          
+              try {
+                const res = await explainMetric({
+                  metric: "gdp",
+                  value,
+                  context: {
+                    severity: 0.9,
+                    financial: 1,
+                    trade: 1,
+                    technology: 0,
+                    energy: 1,
+                  },
+                });
+          
+                setExplanation(res.explanation);
+              } catch (err) {
+                console.error(err);
+              }
+          
+              setExplainLoading(false);
+            }}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
             <XAxis dataKey="year" stroke={axisStroke} fontSize={12} />
             <YAxis stroke={axisStroke} fontSize={12} />
@@ -42,6 +74,18 @@ const ChartsSection = ({ sanctionType }: { sanctionType: SanctionType }) => {
             <Line type="monotone" dataKey="value" stroke={chartColors.gold} strokeWidth={3} dot={{ r: 4, fill: chartColors.gold }} name="GDP %" />
           </LineChart>
         </ResponsiveContainer>
+          {explainLoading && (
+            <p className="text-sm text-muted-foreground mt-4">
+              Generating AI insight...
+            </p>
+          )}
+          
+          {explanation && (
+            <div className="mt-4 rounded-lg border border-border bg-card p-4">
+              <h4 className="font-semibold mb-2">AI Economic Interpretation</h4>
+              <p className="text-sm leading-relaxed">{explanation}</p>
+            </div>
+          )}
       </div>
 
       {/* Trade Bar Chart */}
