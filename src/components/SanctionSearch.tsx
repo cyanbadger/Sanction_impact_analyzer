@@ -24,7 +24,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { analyzeSanction } from "../api";
+import { analyzeSanction, explainMetric } from "../api";
 
 const typeIcons: Record<SanctionEntity["type"], typeof Building2> = {
   Organisation: Building2,
@@ -37,8 +37,10 @@ export default function SanctionSearch() {
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [analysisResults, setAnalysisResults] = useState<Record<number, any>>({});
   const [loading, setLoading] = useState(false);
+  const [dipExplanation, setDipExplanation] = useState<string>("");
+  const [dipLoading, setDipLoading] = useState(false);
 
   function mapEntityToPolicy(entity: SanctionEntity) {
     return {
@@ -91,17 +93,16 @@ export default function SanctionSearch() {
         {filtered.map((e, i) => {
           const TypeIcon = typeIcons[e.type];
           const isExpanded = expandedIndex === i;
-          const chartData = analysisResult
-                  ? [
-                      {
-                        year: "Now",
-                        gdp: analysisResult.gdp,
-                        trade: analysisResult.trade,
-                        fdi: analysisResult.fdi,
-                      },
-                    ]
-                  : [];
-
+          const chartData = analysisResults[i]
+            ? [
+                {
+                  year: "Now",
+                  gdp: analysisResults[i].gdp,
+                  trade: analysisResults[i].trade,
+                  fdi: analysisResults[i].fdi,
+                },
+              ]
+            : [];
           return (
             <div key={i} className="border rounded p-4">
               <div className="flex justify-between">
@@ -122,7 +123,12 @@ export default function SanctionSearch() {
                       try {
                         const policy = mapEntityToPolicy(e);
                         const result = await analyzeSanction(policy);
-                        setAnalysisResult(result);
+
+                        setAnalysisResults(prev => ({
+                          ...prev,
+                          [i]: result
+                        }));
+
                         setExpandedIndex(i);
                       } catch (err) {
                         console.error(err);
@@ -140,35 +146,71 @@ export default function SanctionSearch() {
               </div>
 
               {isExpanded && (
-                  <div className="mt-4 space-y-4">
-                    {loading && <p>Running model…</p>}
-                
-                    {analysisResult && (
-                      <>
-                        <div className="text-lg font-semibold">
-                          Impact Score: {analysisResult.score?.toFixed(2)}
-                        </div>
+                <div className="mt-4 space-y-4">
+                  {loading && <p>Running model…</p>}
 
-                        {analysisResult.explanation && (
-                          <div className="text-sm text-gray-600 mt-2">
-                            {analysisResult.explanation}
-                          </div>
-                        )}
-                                        
-                        <ResponsiveContainer width="100%" height={200}>
-                          <LineChart data={chartData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="year" />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
-                            <Line dataKey="gdp" />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </>
-                    )}
-                  </div>
-                )}
+                  {analysisResults[i] && (
+                    <>
+                      <div className="text-lg font-semibold">
+                        Impact Score: {analysisResults[i].score?.toFixed(2)}
+                      </div>
+
+                      {/* ✅ GRAPH WITH CLICK HANDLER */}
+                      <ResponsiveContainer width="100%" height={200}>
+                        <LineChart
+                          data={chartData}
+                          onClick={async (data: any) => {
+                            if (!data?.activePayload || !analysisResults[i]) return;
+
+                            const clickedValue = data.activePayload[0].value;
+
+                            setDipLoading(true);
+
+                            try {
+                              const explanation = await explainMetric({
+                                metric: "gdp",
+                                value: clickedValue,
+                                context: mapEntityToPolicy(e),
+                              });
+
+                              setDipExplanation(explanation.explanation);
+                            } catch (err) {
+                              console.error(err);
+                            }
+
+                            setDipLoading(false);
+                          }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="year" />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          <Line dataKey="gdp" />
+                        </LineChart>
+                      </ResponsiveContainer>
+
+                      {/* ✅ STEP 5 — SHOW NLP BELOW GRAPH */}
+                      {dipLoading && (
+                        <p className="text-sm text-gray-500">
+                          Generating AI explanation...
+                        </p>
+                      )}
+
+                      {dipExplanation && (
+                        <div className="bg-gray-50 border rounded-lg p-4 mt-4">
+                          <h4 className="font-semibold mb-2">
+                            AI Explanation for Selected Dip
+                          </h4>
+                          <p className="text-sm text-gray-700 leading-relaxed">
+                            {dipExplanation}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
