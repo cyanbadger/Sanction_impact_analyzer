@@ -1,16 +1,18 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import torch
+
 from model import SanctionImpactGNN
 from utils import load_trade_graph
-from fastapi.middleware.cors import CORSMiddleware
 
-# Hugging Face
-from transformers import pipeline
+# ==============================
+# Initialize FastAPI
+# ==============================
 
-# ---------------- Initialize API ----------------
 app = FastAPI(title="Sanction Impact Analyzer API")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # dev only
@@ -18,27 +20,37 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ==============================
+# Load GNN Model
+# ==============================
+
 print("Loading GNN model...")
 
-# ---------------- Load GNN ----------------
-model = SanctionImpactGNN(in_dim=15)
-model.load_state_dict(torch.load("saved_model.pt", map_location="cpu"))
-model.eval()
+gnn_model = SanctionImpactGNN(in_dim=15)
+gnn_model.load_state_dict(torch.load("saved_model.pt", map_location="cpu"))
+gnn_model.eval()
 
 print("GNN loaded.")
-# ---------------- Load graph cache ----------------
+
 graph_cache = torch.load("trade_graph.pt")
 print("Graph cache loaded.")
 
-# ---------------- Load NLP model ----------------
-print("Loading NLP model (FLAN-T5)...")
+# ==============================
+# Load NLP Model (FLAN-T5)
+# ==============================
 
-tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-small")
-nlp_model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-small")
+print("Loading NLP model...")
+
+tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-base")
+nlp_model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-base")
 
 print("NLP model ready.")
 
-# ---------------- Request schema ----------------
+# ==============================
+# Request Schemas
+# ==============================
+
 class PolicyInput(BaseModel):
     severity: float
     financial: int
@@ -48,43 +60,20 @@ class PolicyInput(BaseModel):
     issuer_strength: float
     binding: int
 
-# ---------------- Explanation function ----------------
-def generate_explanation(policy, preds):
 
-    prompt = f"""
-You are a macroeconomic analyst.
+class ExplanationInput(BaseModel):
+    metric: str
+    value: float
+    context: dict
 
-Explain why GDP changes under sanctions using economic reasoning.
 
-Sanction severity: {policy.severity}
-Financial sanctions: {policy.financial}
-Trade restrictions: {policy.trade}
-Technology restrictions: {policy.technology}
-Energy sanctions: {policy.energy}
+# ==============================
+# Prediction Endpoint
+# ==============================
 
-Predicted GDP impact score: {preds['gdp']:.3f}
-
-Focus on transmission channels like trade disruption, capital flows, and energy shocks.
-Give a concise explanation.
-"""
-
-    inputs = tokenizer(prompt, return_tensors="pt")
-
-    outputs = nlp_model.generate(
-        **inputs,
-        max_new_tokens=100,
-        temperature=0.7,
-        top_p=0.9,
-        repetition_penalty=1.2,
-    )
-
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-# ---------------- Prediction endpoint ----------------
 @app.post("/predict")
 def predict(policy: PolicyInput):
 
-    # Build policy vector
     policy_vector = torch.tensor([
         policy.severity,
         policy.financial,
@@ -95,21 +84,60 @@ def predict(policy: PolicyInput):
         policy.binding
     ], dtype=torch.float32)
 
-    # Build temporal graphs
     graphs = []
     for _ in range(5):
         graphs.append(load_trade_graph(policy_vector))
 
-    # Run GNN
     with torch.no_grad():
-        preds = model(graphs)
+        preds = gnn_model(graphs)
 
-    # Convert outputs
     output = {k: float(v.item()) for k, v in preds.items()}
 
-    # Generate NLP explanation
-    explanation = generate_explanation(policy, output)
-
-    output["explanation"] = explanation
-
     return output
+
+
+# ==============================
+# NLP Explanation Endpoint
+# ==============================
+
+@app.post("/explain")
+def explain_metric(data: ExplanationInput):
+
+    prompt = f"""
+Task: Explain why there is a dip in {data.metric.upper()}.
+
+Predicted value: {data.value:.2f}
+
+Sanction context:
+Severity: {data.context.get('severity')}
+Financial sanctions: {data.context.get('financial')}
+Trade restrictions: {data.context.get('trade')}
+Technology restrictions: {data.context.get('technology')}
+Energy sanctions: {data.context.get('energy')}
+
+Explain clearly using macroeconomic transmission channels such as:
+- Trade disruption
+- Capital flow restrictions
+- Investment decline
+- Energy supply shocks
+- Technology constraints
+
+Keep explanation concise (4–6 sentences).
+"""
+
+    inputs = tokenizer(prompt, return_tensors="pt")
+
+    outputs = nlp_model.generate(
+        **inputs,
+        max_new_tokens=120,
+        do_sample=True,
+        temperature=0.3,
+        top_p=0.9,
+        repetition_penalty=1.3,
+        no_repeat_ngram_size=4,
+        early_stopping=True,
+    )
+
+    explanation = tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+    return {"explanation": explanation}
