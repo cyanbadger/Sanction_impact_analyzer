@@ -28,7 +28,19 @@ const ChartsSection = ({ sanctionType }: { sanctionType: SanctionType }) => {
   const gdp = getGdpData(sanctionType);
   const trade = getTradeData(sanctionType);
   const fdi = getFdiData(sanctionType);
-
+  const loadingMessages = [
+  "Running analysis… that’s what she said.",
+  "Crunching numbers… we’ll be back.",
+  "Analyzing data… may the graphs be with you.",
+  "Processing request… one does not simply ignore sanctions.",
+  "Optimizing insights… it’s not a bug, it’s a feature.",
+  "Running simulation… let’s circle back shortly.",
+  "Consulting models… trust the process.",
+  "Checking assumptions… because spreadsheets never lie."
+  ];
+  const [loadingText] = useState(
+  loadingMessages[Math.floor(Math.random() * loadingMessages.length)]
+  );
   return (
     <div className="grid gap-8 lg:grid-cols-2">
       {/* GDP Line Chart */}
@@ -76,8 +88,9 @@ const ChartsSection = ({ sanctionType }: { sanctionType: SanctionType }) => {
         </ResponsiveContainer>
           {explainLoading && (
             <p className="text-sm text-muted-foreground mt-4">
-              Generating AI insight...
-            </p>
+              <div className="animate-pulse text-sm text-muted-foreground mt-4">
+                {loadingText}
+              </div>            </p>
           )}
           
           {explanation && (
