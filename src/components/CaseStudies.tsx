@@ -1,14 +1,37 @@
 import { caseStudies } from "@/lib/sanctionData";
 import { BookOpen, TrendingDown, CheckCircle2, AlertTriangle } from "lucide-react";
-
+import { useState, useEffect } from "react";
 const sectorColors: Record<string, string> = {
   Defence: "text-red-400 bg-red-500/10",
   Energy: "text-amber-400 bg-amber-500/10",
   Finance: "text-blue-400 bg-blue-500/10",
   Technology: "text-violet-400 bg-violet-500/10",
 };
-
+const loadingMessages = [
+  "Loading case studies… may the data be with you.",
+  "Digging through history… we’ll be back.",
+  "Reviewing sanctions… that’s what she said.",
+  "Consulting archives… one does not simply skip due diligence.",
+  "Compiling insights… it’s not a bug, it’s a feature.",
+];
 const CaseStudies = () => {
+  const [loading, setLoading] = useState(true);
+
+const [loadingText] = useState(
+  loadingMessages[Math.floor(Math.random() * loadingMessages.length)]
+  );
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="mt-14 text-sm text-muted-foreground animate-pulse">
+        {loadingText}
+      </div>
+    );
+  }
   return (
     <div className="mt-14 animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
       <h2 className="font-display text-2xl font-semibold text-foreground mb-2">
