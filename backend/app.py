@@ -6,7 +6,7 @@ import torch
 from macro_risk_model import MacroRiskModel
 from model import SanctionImpactGNN
 from utils import load_trade_graph
-
+from fastapi import Query
 # ==============================
 # Initialize API
 # ==============================
@@ -121,11 +121,18 @@ def explain_metric(data: ExplanationInput):
         prompt = f"""
 You are an economic analyst with light office-style humor.
 
-Explain why {data.metric.upper()} changed.
+Country: {data.context.get('country', 'the selected country')}
+
+Explain why {data.metric.upper()} changed for {data.context.get('country', 'this country')}.
 
 Observed value: {data.value:.2f}
 
-Provide a concise explanation.
+Important:
+- Focus ONLY on the specified country.
+- Do not default to the United States unless the country is USA.
+- Keep explanation grounded in macroeconomic logic.
+
+Provide a concise explanation (4–6 sentences).
 """
 
         inputs = tokenizer(prompt, return_tensors="pt")
@@ -133,7 +140,12 @@ Provide a concise explanation.
         outputs = nlp_model.generate(
             **inputs,
             max_new_tokens=120,
-            temperature=0.3
+            do_sample=True,
+            temperature=0.4,
+            top_p=0.9,
+            repetition_penalty=1.3,
+            no_repeat_ngram_size=4,
+            early_stopping=True,
         )
 
         explanation = tokenizer.decode(outputs[0], skip_special_tokens=True)
@@ -247,4 +259,34 @@ def macro_risk(data: CountryInput):
     return {
         "country": data.country_code,
         "risk_score": risk_score
+    }
+
+# ==============================
+# Time-series endpoints
+# ==============================
+@app.get("/macro-timeseries")
+def macro_timeseries(country_code: str = Query(...)):
+
+    def get_series(indicator):
+        url = f"https://api.worldbank.org/v2/country/{country_code}/indicator/{indicator}?format=json&per_page=100"
+        r = requests.get(url)
+        data = r.json()
+
+        if not isinstance(data, list) or len(data) < 2:
+            return []
+
+        series = []
+        for entry in data[1]:
+            if entry.get("value") is not None:
+                series.append({
+                    "year": entry["date"],
+                    "value": entry["value"]
+                })
+
+        return series[:10]  # last 10 years
+
+    return {
+        "gdp": get_series("NY.GDP.MKTP.KD.ZG"),       # GDP growth
+        "trade": get_series("NE.TRD.GNFS.ZS"),        # Trade % GDP
+        "fdi": get_series("BX.KLT.DINV.WD.GD.ZS"),    # FDI % GDP
     }
