@@ -58,3 +58,22 @@ export async function explainMetric(payload: {
     throw error;
   }
 }
+// ==============================
+// Macro Risk API
+// ==============================
+
+export async function getMacroRisk(countryCode: string) {
+  const response = await fetch("http://localhost:8000/macro-risk", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ country_code: countryCode }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Macro risk request failed");
+  }
+
+  return await response.json();
+}
