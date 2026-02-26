@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { sanctionEntities, type SanctionEntity } from "@/lib/sanctionData";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Search,
   Building2,
   User,
@@ -76,17 +83,18 @@ export default function SanctionSearch() {
           onChange={(e) => setQuery(e.target.value)}
         />
 
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          className="border rounded px-3"
-        >
-          <option value="All">All</option>
-          <option value="Organisation">Organisation</option>
-          <option value="Bank">Bank</option>
-          <option value="Individual">Individual</option>
-          <option value="Vessel">Vessel</option>
-        </select>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-[180px] bg-card border-border">
+            <SelectValue placeholder="Filter Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">All</SelectItem>
+            <SelectItem value="Organisation">Organisation</SelectItem>
+            <SelectItem value="Bank">Bank</SelectItem>
+            <SelectItem value="Individual">Individual</SelectItem>
+            <SelectItem value="Vessel">Vessel</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-3">
@@ -155,41 +163,78 @@ export default function SanctionSearch() {
                         Impact Score: {analysisResults[i].score?.toFixed(2)}
                       </div>
 
-                      {/* ✅ GRAPH WITH CLICK HANDLER */}
-                      <ResponsiveContainer width="100%" height={200}>
-                        <LineChart
-                          data={chartData}
-                          onClick={async (data: any) => {
-                            if (!data?.activePayload || !analysisResults[i]) return;
-
-                            const clickedValue = data.activePayload[0].value;
-
-                            setDipLoading(true);
-
-                            try {
-                              const explanation = await explainMetric({
-                                metric: "gdp",
-                                value: clickedValue,
-                                context: mapEntityToPolicy(e),
-                              });
-
-                              setDipExplanation(explanation.explanation);
-                            } catch (err) {
-                              console.error(err);
-                            }
-
-                            setDipLoading(false);
-                          }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="year" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Line dataKey="gdp" />
-                        </LineChart>
-                      </ResponsiveContainer>
-
+                      {/* Impact Gauge Card */}
+                        <div className="flex flex-col items-center justify-center py-6">
+                        
+                          {analysisResults[i] && (
+                            <>
+                              {(() => {
+                                const score = analysisResults[i].score ?? analysisResults[i].gdp ?? 0.4;
+                        
+                                const percentage = Math.min(Math.max(score * 100, 0), 100);
+                        
+                                const getLevel = () => {
+                                  if (percentage > 75) return "Severe Impact";
+                                  if (percentage > 55) return "High Impact";
+                                  if (percentage > 35) return "Moderate Impact";
+                                  return "Low Impact";
+                                };
+                        
+                                const getColor = () => {
+                                  if (percentage > 75) return "#ef4444";
+                                  if (percentage > 55) return "#f97316";
+                                  if (percentage > 35) return "#eab308";
+                                  return "#22c55e";
+                                };
+                        
+                                const radius = 70;
+                                const circumference = 2 * Math.PI * radius;
+                                const offset = circumference - (percentage / 100) * circumference;
+                        
+                                return (
+                                  <div className="flex flex-col items-center transitio-all duration-500"
+                                      style={{
+                                      boxShadow: `0 0 25px ${getColor()}55`,
+                                      borderRadius: "9999px",
+                                  }}
+                                >
+                                    <svg width="180" height="180" className="mb-4">
+                                      <circle
+                                        cx="90"
+                                        cy="90"
+                                        r={radius}
+                                        stroke="#1f2937"
+                                        strokeWidth="12"
+                                        fill="transparent"
+                                      />
+                                      <circle
+                                        cx="90"
+                                        cy="90"
+                                        r={radius}
+                                        stroke={getColor()}
+                                        strokeWidth="12"
+                                        fill="transparent"
+                                        strokeDasharray={circumference}
+                                        strokeDashoffset={offset}
+                                        strokeLinecap="round"
+                                        style={{ transition: "stroke-dashoffset 0.8s ease" }}
+                                      />
+                                    </svg>
+                        
+                                    <div className="text-3xl font-bold">
+                                      {percentage.toFixed(1)}%
+                                    </div>
+                        
+                                    <div className="text-sm text-muted-foreground mt-1">
+                                      {getLevel()}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                            </>
+                          )}
+                        
+                        </div>
                       {/* ✅ STEP 5 — SHOW NLP BELOW GRAPH */}
                       {dipLoading && (
                         <p className="text-sm text-gray-500">
