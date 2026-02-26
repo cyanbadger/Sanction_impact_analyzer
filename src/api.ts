@@ -77,3 +77,15 @@ export async function getMacroRisk(countryCode: string) {
 
   return await response.json();
 }
+//================================
+//time series call
+//================================
+export async function getMacroTimeseries(countryCode: string) {
+  const res = await fetch(
+    `http://localhost:8000/macro-timeseries?country_code=${countryCode}`
+  );
+
+  if (!res.ok) throw new Error("Failed to fetch macro data");
+
+  return await res.json();
+}
