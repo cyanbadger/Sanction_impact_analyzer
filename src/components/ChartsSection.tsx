@@ -2,9 +2,10 @@ import {
   LineChart, Line, BarChart, Bar, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
-import { getGdpData, getTradeData, getFdiData, type SanctionType } from "@/lib/sanctionData";
-import { useState } from "react";
+import { getMacroTimeseries } from "../api";
+import { useState , useEffect} from "react";
 import { explainMetric } from "../api";
+import type { SanctionType } from "@/lib/sanctionData";
 const chartColors = {
   gold: "hsl(43, 96%, 56%)",
   saffron: "hsl(33, 100%, 50%)",
@@ -25,9 +26,20 @@ const axisStroke = "hsl(0, 0%, 40%)";
 const ChartsSection = ({ sanctionType }: { sanctionType: SanctionType }) => {
   const [explanation, setExplanation] = useState("");
   const [explainLoading, setExplainLoading] = useState(false);
-  const gdp = getGdpData(sanctionType);
-  const trade = getTradeData(sanctionType);
-  const fdi = getFdiData(sanctionType);
+  const [gdp, setGdp] = useState([]);
+  const [trade, setTrade] = useState([]);
+  const [fdi, setFdi] = useState([]);
+    
+  useEffect(() => {
+    async function fetchData() {
+      const data = await getMacroTimeseries("IND"); // you can make dynamic later
+      setGdp(data.gdp.reverse());
+      setTrade(data.trade.reverse());
+      setFdi(data.fdi.reverse());
+    }
+  
+    fetchData();
+  }, []);
   const loadingMessages = [
   "Running analysis… that’s what she said.",
   "Crunching numbers… we’ll be back.",
@@ -63,6 +75,7 @@ const ChartsSection = ({ sanctionType }: { sanctionType: SanctionType }) => {
                   metric: "gdp",
                   value,
                   context: {
+                      country: "India",
                     severity: 0.9,
                     financial: 1,
                     trade: 1,
@@ -102,22 +115,26 @@ const ChartsSection = ({ sanctionType }: { sanctionType: SanctionType }) => {
       </div>
 
       {/* Trade Bar Chart */}
-      <div className="rounded-xl border border-border bg-card p-6">
-        <h3 className="font-display text-lg font-semibold text-foreground mb-4">
-          Trade Volume (B USD) — Before vs After
-        </h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={trade}>
-            <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-            <XAxis dataKey="year" stroke={axisStroke} fontSize={12} />
-            <YAxis stroke={axisStroke} fontSize={12} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Legend />
-            <Bar dataKey="before" fill={chartColors.dim} name="Before Sanctions" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="after" fill={chartColors.saffron} name="After Sanctions" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+        <div className="rounded-xl border border-border bg-card p-6">
+          <h3 className="font-display text-lg font-semibold text-foreground mb-4">
+            Trade Openness (% of GDP) - India
+          </h3>
+        
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={trade}>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+              <XAxis dataKey="year" stroke={axisStroke} fontSize={12} />
+              <YAxis stroke={axisStroke} fontSize={12} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Bar
+                dataKey="value"
+                fill={chartColors.saffron}
+                name="Trade % of GDP"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
 
       {/* FDI Area Chart */}
       <div className="rounded-xl border border-border bg-card p-6">
