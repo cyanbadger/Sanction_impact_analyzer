@@ -48,6 +48,8 @@ export default function SanctionSearch() {
   const [loading, setLoading] = useState(false);
   const [dipExplanation, setDipExplanation] = useState<string>("");
   const [dipLoading, setDipLoading] = useState(false);
+  const [customSanctions, setCustomSanctions] = useState<SanctionEntity[]>([]);
+  const [newName, setNewName] = useState("");
 
   function mapEntityToPolicy(entity: SanctionEntity) {
     return {
@@ -60,13 +62,31 @@ export default function SanctionSearch() {
       binding: 1,
     };
   }
+    const handleAddSanction = () => {
+      if (!newName.trim()) return;
+    
+      const newSanction: SanctionEntity = {
+        name: newName,
+        country: "Custom",
+        type: "Organisation",
+        status: "Active",
+        reason: "User defined sanction",
+      };
+    
+      setCustomSanctions(prev => [newSanction, ...prev]);
+      setNewName("");
+    };
 
-  const filtered = sanctionEntities.filter((e) => {
+  const allSanctions = [...customSanctions, ...sanctionEntities];
+
+  const filtered = allSanctions.filter((e) => {
     const matchesQuery =
       !query ||
       e.name.toLowerCase().includes(query.toLowerCase()) ||
       e.country.toLowerCase().includes(query.toLowerCase());
+    
     const matchesType = typeFilter === "All" || e.type === typeFilter;
+    
     return matchesQuery && matchesType;
   });
 
@@ -75,6 +95,23 @@ export default function SanctionSearch() {
       <h2 className="text-2xl font-semibold mb-2">
         Sanction Search
       </h2>
+        <div className="border p-4 rounded mb-6 bg-card">
+          <h3 className="font-semibold mb-3">Add New Sanction Info</h3>
+        
+          <div className="flex gap-3">
+            <Input
+              placeholder="Enter sanction name..."
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
+            <button
+              onClick={handleAddSanction}
+              className="px-4 py-2 bg-primary text-white rounded"
+            >
+              Add
+            </button>
+          </div>
+        </div>
 
       <div className="flex gap-3 mb-6">
         <Input
