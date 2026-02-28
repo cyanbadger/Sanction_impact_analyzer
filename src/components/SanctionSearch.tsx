@@ -32,6 +32,8 @@ import {
   Legend,
 } from "recharts";
 import { analyzeSanction, explainMetric } from "../api";
+import { supabase } from "@/lib/supabase";
+import { useEffect } from "react";
 
 const typeIcons: Record<SanctionEntity["type"], typeof Building2> = {
   Organisation: Building2,
@@ -48,36 +50,94 @@ export default function SanctionSearch() {
   const [loading, setLoading] = useState(false);
   const [dipExplanation, setDipExplanation] = useState<string>("");
   const [dipLoading, setDipLoading] = useState(false);
-  const [customSanctions, setCustomSanctions] = useState<SanctionEntity[]>([]);
-  const [newName, setNewName] = useState("");
-
-  function mapEntityToPolicy(entity: SanctionEntity) {
-    return {
-      severity: entity.status === "Active" ? 0.9 : 0.3,
-      financial: entity.type === "Bank" ? 1 : 0,
-      trade: entity.type === "Organisation" ? 1 : 0,
-      technology: entity.reason.toLowerCase().includes("technology") ? 1 : 0,
-      energy: entity.reason.toLowerCase().includes("oil") ? 1 : 0,
+  const [customSanctions, setCustomSanctions] = useState<any[]>([]);
+  const [newSanction, setNewSanction] = useState({
+      name: "",
+      severity: 0.5,
+      financial: 0,
+      trade: 0,
+      technology: 0,
+      energy: 0,
       issuer_strength: 0.7,
       binding: 1,
+    });
+    useEffect(() => {
+      fetchCustomSanctions();
+    }, []);
+    
+    const fetchCustomSanctions = async () => {
+      const { data, error } = await supabase
+        .from("sanction_policies")
+        .select("*")
+        .order("created_at", { ascending: false });
+    
+      if (!error && data) {
+        const formatted = data.map((s: any) => ({
+          name: s.name,
+          country: "Custom",
+          type: "Organisation",
+          status: "Active",
+          reason: "User created sanction",
+          severity: s.severity,
+          financial: s.financial,
+          trade: s.trade,
+          technology: s.technology,
+          energy: s.energy,
+          issuer_strength: s.issuer_strength,
+          binding: s.binding,
+        }));
+    
+        setCustomSanctions(formatted);
+      }
+    };
+  function mapEntityToPolicy(entity: any) {
+    return {
+      severity:
+        entity.severity ??
+        (entity.status === "Active" ? 0.9 : 0.3),
+      financial:
+        entity.financial ??
+        (entity.type === "Bank" ? 1 : 0),
+      trade:
+        entity.trade ??
+        (entity.type === "Organisation" ? 1 : 0),
+      technology:
+        entity.technology ??
+        (entity.reason?.toLowerCase().includes("technology") ? 1 : 0),
+      energy:
+        entity.energy ??
+        (entity.reason?.toLowerCase().includes("oil") ? 1 : 0),
+      issuer_strength: entity.issuer_strength ?? 0.7,
+      binding: entity.binding ?? 1,
     };
   }
-    const handleAddSanction = () => {
-      if (!newName.trim()) return;
+    const handleAddSanction = async () => {
+      if (!newSanction.name.trim()) return;
     
-      const newSanction: SanctionEntity = {
-        name: newName,
-        country: "Custom",
-        type: "Organisation",
-        status: "Active",
-        reason: "User defined sanction",
-      };
+      const { error } = await supabase
+        .from("sanction_policies")
+        .insert([newSanction]);
     
-      setCustomSanctions(prev => [newSanction, ...prev]);
-      setNewName("");
+      if (error) {
+        console.error(error);
+        return;
+      }
+    
+      setNewSanction({
+        name: "",
+        severity: 0.5,
+        financial: 0,
+        trade: 0,
+        technology: 0,
+        energy: 0,
+        issuer_strength: 0.7,
+        binding: 1,
+      });
+    
+      fetchCustomSanctions();
     };
 
-  const allSanctions = [...customSanctions, ...sanctionEntities];
+    const allSanctions = [...customSanctions, ...sanctionEntities];
 
   const filtered = allSanctions.filter((e) => {
     const matchesQuery =
@@ -95,22 +155,63 @@ export default function SanctionSearch() {
       <h2 className="text-2xl font-semibold mb-2">
         Sanction Search
       </h2>
-        <div className="border p-4 rounded mb-6 bg-card">
-          <h3 className="font-semibold mb-3">Add New Sanction Info</h3>
+        <div className="border p-4 rounded mb-6 bg-card space-y-4">
+          <h3 className="font-semibold">Create Custom Sanction</h3>
         
-          <div className="flex gap-3">
-            <Input
-              placeholder="Enter sanction name..."
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+          <Input
+            placeholder="Sanction Name"
+            value={newSanction.name}
+            onChange={(e) =>
+              setNewSanction({ ...newSanction, name: e.target.value })
+            }
+          />
+        
+          {/* Severity */}
+          <div>
+            <label className="text-sm">
+              Severity: {newSanction.severity}
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={newSanction.severity}
+              onChange={(e) =>
+                setNewSanction({
+                  ...newSanction,
+                  severity: parseFloat(e.target.value),
+                })
+              }
+              className="w-full"
             />
-            <button
-              onClick={handleAddSanction}
-              className="px-4 py-2 bg-primary text-white rounded"
-            >
-              Add
-            </button>
           </div>
+        
+          {/* Toggles */}
+          <div className="flex gap-4">
+            {["financial", "trade", "technology", "energy"].map((key) => (
+              <label key={key} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={newSanction[key as keyof typeof newSanction] === 1}
+                  onChange={(e) =>
+                    setNewSanction({
+                      ...newSanction,
+                      [key]: e.target.checked ? 1 : 0,
+                    })
+                  }
+                />
+                {key}
+              </label>
+            ))}
+          </div>
+        
+          <button
+            onClick={handleAddSanction}
+            className="px-4 py-2 bg-primary text-white rounded"
+          >
+            Add Sanction
+          </button>
         </div>
 
       <div className="flex gap-3 mb-6">
@@ -229,7 +330,7 @@ export default function SanctionSearch() {
                                 const offset = circumference - (percentage / 100) * circumference;
                         
                                 return (
-                                  <div className="flex flex-col items-center transitio-all duration-500"
+                                  <div className="flex flex-col items-center transition-all duration-500"
                                       style={{
                                       boxShadow: `0 0 25px ${getColor()}55`,
                                       borderRadius: "9999px",
